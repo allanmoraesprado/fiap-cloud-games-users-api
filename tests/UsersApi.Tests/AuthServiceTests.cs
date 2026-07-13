@@ -3,8 +3,10 @@ using UsersApi.Application.Interfaces;
 using UsersApi.Application.Services;
 using UsersApi.Domain;
 using UsersApi.Domain.Exceptions;
+using UsersApi.Messaging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -16,9 +18,11 @@ public class AuthServiceTests
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly Mock<IPasswordHasher> _hasher = new();
     private readonly Mock<IJwtTokenService> _jwt = new();
+    private readonly Mock<IEventPublisher> _publisher = new();
+    private readonly IOptions<KafkaSettings> _kafka = Options.Create(new KafkaSettings());
 
     private AuthService Build() =>
-        new(_users.Object, _uow.Object, _hasher.Object, _jwt.Object, NullLogger<AuthService>.Instance);
+        new(_users.Object, _uow.Object, _hasher.Object, _jwt.Object, _publisher.Object, _kafka, NullLogger<AuthService>.Instance);
 
     [Fact]
     public async Task Register_throws_when_email_already_exists()
@@ -36,7 +40,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task Register_succeeds_for_valid_data()
+    public async Task Register_succeeds_and_publishes_event()
     {
         _users.Setup(r => r.EmailExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         _hasher.Setup(h => h.Hash(It.IsAny<string>())).Returns("hashed");
@@ -45,6 +49,8 @@ public class AuthServiceTests
         resp.Email.Should().Be("john@fcg.com");
         _users.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Once);
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _publisher.Verify(p => p.PublishAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

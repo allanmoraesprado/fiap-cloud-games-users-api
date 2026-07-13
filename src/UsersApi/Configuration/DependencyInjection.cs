@@ -3,6 +3,7 @@ using UsersApi.Application.Interfaces;
 using UsersApi.Application.Services;
 using UsersApi.Infrastructure.Persistence;
 using UsersApi.Infrastructure.Security;
+using UsersApi.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -27,6 +28,9 @@ public static class DependencyInjection
 
         services.Configure<JwtSettings>(config.GetSection("Jwt"));
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
+
+        services.Configure<KafkaSettings>(config.GetSection("Kafka"));
+        services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
 
         return services;
     }

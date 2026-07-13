@@ -3,9 +3,9 @@
 Identity microservice for the FIAP Cloud Games Phase 2 platform. Owns user
 registration, authentication, **JWT issuance**, roles, and user administration.
 
-> **Milestone status: M1.** Independent .NET 8 API against the `fcg_users`
-> database. **No Kafka yet** — `UserCreatedEvent` publishing is added in M2.
-> No Kubernetes manifests yet.
+> **Milestone status: M2.** Independent .NET 8 API against the `fcg_users`
+> database. Publishes **`UserCreatedEvent`** to Kafka (`fcg.users.created`) after a
+> successful registration (consumed by NotificationsAPI). No Kubernetes manifests yet.
 
 Part of the five-repository solution (`users-api`, `catalog-api`,
 `payments-api`, `notifications-api`, `orchestration`).
@@ -49,6 +49,15 @@ Single-project layout with internal folders: `Domain`, `Application`,
 
 Seeded users: `admin@fcg.com / Admin@123` (Admin), `user@fcg.com / User@123` (User).
 
+### Events published
+
+| Event | Topic | Key | When |
+|---|---|---|---|
+| `UserCreatedEvent` | `fcg.users.created` | `UserId` | After a successful `POST /api/auth/register` |
+
+Publishing happens **after** the DB commit and failures are swallowed/logged — a
+temporarily-unavailable broker does not fail the registration.
+
 ---
 
 ## Environment variables
@@ -60,6 +69,8 @@ Seeded users: `admin@fcg.com / Admin@123` (Admin), `user@fcg.com / User@123` (Us
 | `JWT__ISSUER` | Token issuer | `FiapCloudGames` |
 | `JWT__AUDIENCE` | Token audience | `FiapCloudGames` |
 | `JWT__EXPIRATIONMINUTES` | Token lifetime | `120` |
+| `Kafka__BootstrapServers` | Kafka bootstrap (host dev / `kafka:9092` in containers) | `localhost:29092` |
+| `Kafka__UserCreatedTopic` | Topic for `UserCreatedEvent` | `fcg.users.created` |
 
 Only local/development placeholders are committed. Provide a real secret via
 environment variable in any shared environment.

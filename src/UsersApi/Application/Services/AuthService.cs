@@ -1,9 +1,12 @@
 using UsersApi.Application.Dtos.Auth;
 using UsersApi.Application.Interfaces;
 using UsersApi.Application.Validators;
+using UsersApi.Contracts;
 using UsersApi.Domain;
 using UsersApi.Domain.Exceptions;
+using UsersApi.Messaging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace UsersApi.Application.Services;
 
@@ -13,6 +16,8 @@ public class AuthService : IAuthService
     private readonly IUnitOfWork _uow;
     private readonly IPasswordHasher _hasher;
     private readonly IJwtTokenService _jwt;
+    private readonly IEventPublisher _publisher;
+    private readonly KafkaSettings _kafka;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
@@ -20,12 +25,16 @@ public class AuthService : IAuthService
         IUnitOfWork uow,
         IPasswordHasher hasher,
         IJwtTokenService jwt,
+        IEventPublisher publisher,
+        IOptions<KafkaSettings> kafkaOptions,
         ILogger<AuthService> logger)
     {
         _users = users;
         _uow = uow;
         _hasher = hasher;
         _jwt = jwt;
+        _publisher = publisher;
+        _kafka = kafkaOptions.Value;
         _logger = logger;
     }
 
@@ -44,6 +53,12 @@ public class AuthService : IAuthService
         await _uow.SaveChangesAsync(ct);
 
         _logger.LogInformation("User registered: {Email}", email);
+
+        // Publish AFTER the commit. KafkaEventPublisher swallows/logs broker errors, so a
+        // temporarily-unavailable broker never fails a registration that already succeeded.
+        var evt = new UserCreatedEvent(Guid.NewGuid(), user.Id, user.Name, user.Email, DateTime.UtcNow);
+        await _publisher.PublishAsync(_kafka.UserCreatedTopic, user.Id.ToString(), evt, ct);
+
         return new UserResponse(user.Id, user.Name, user.Email, user.Role.ToString(), user.CreatedAt);
     }
 
