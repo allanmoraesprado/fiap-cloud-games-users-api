@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-api
+  namespace: fcg
+  labels:
+    app: users-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-api
+  template:
+    metadata:
+      labels:
+        app: users-api
+    spec:
+      containers:
+        - name: users-api
+          image: fcg-users-api:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: fcg-config          # shared: Jwt issuer/audience, Kafka bootstrap
+            - configMapRef:
+                name: users-api-config     # this service's topic
+          env:
+            # Password comes from the shared Secret; the connection string is composed
+            # with k8s env substitution so the password is never duplicated in config.
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-secret
+                  key: Postgres__Password
+            - name: ConnectionStrings__Postgres
+              value: "Host=postgres;Port=5432;Database=fcg_users;Username=fcg;Password=$(POSTGRES_PASSWORD)"
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-secret
+                  key: Jwt__SecretKey
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
