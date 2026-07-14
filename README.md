@@ -3,9 +3,11 @@
 Identity microservice for the FIAP Cloud Games Phase 2 platform. Owns user
 registration, authentication, **JWT issuance**, roles, and user administration.
 
-> **Milestone status: M2.** Independent .NET 8 API against the `fcg_users`
-> database. Publishes **`UserCreatedEvent`** to Kafka (`fcg.users.created`) after a
-> successful registration (consumed by NotificationsAPI). No Kubernetes manifests yet.
+Independent .NET 8 API. Owns the `fcg_users` database, issues JWTs, and publishes
+**`UserCreatedEvent`** to Kafka (`fcg.users.created`) after a successful registration
+(consumed by NotificationsAPI). Runs standalone, via Docker Compose, and on local
+Kubernetes (see `k8s/`). For the full system runbook (Compose + Kubernetes) and
+architecture docs, see the **`fiap-cloud-games-orchestration`** repository.
 
 Part of the five-repository solution (`users-api`, `catalog-api`,
 `payments-api`, `notifications-api`, `orchestration`).
