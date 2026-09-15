@@ -23,7 +23,7 @@ Part of the six-repository solution (`users-api`, `catalog-api`, `payments-api`,
 - Role-based authorization (`User`, `Admin`).
 - User administration (`GET/DELETE /api/users`) — Admin only.
 
-UsersAPI is the **sole JWT issuer**. CatalogAPI (from M3) validates those tokens
+UsersAPI is the **sole JWT issuer**. CatalogAPI validates those tokens
 using the **same shared symmetric secret** — keep `Jwt` settings identical across
 both services.
 
@@ -97,9 +97,9 @@ environment variable in any shared environment.
 
 ---
 
-## Run locally (uses the M0 Postgres)
+## Run locally (uses the Compose Postgres)
 
-1. Start the M0 infrastructure (from the orchestration repo): `docker compose up -d`
+1. Start the infrastructure (from the orchestration repo): `docker compose up -d`
    — the `fcg_users` database already exists.
 2. Run the API:
    ```bash
