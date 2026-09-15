@@ -5,12 +5,14 @@ registration, authentication, **JWT issuance**, roles, and user administration.
 
 Independent .NET 8 API. Owns the `fcg_users` database, issues JWTs, and publishes
 **`UserCreatedEvent`** to Kafka (`fcg.users.created`) after a successful registration
-(consumed by NotificationsAPI). Runs standalone, via Docker Compose, and on local
-Kubernetes (see `k8s/`). For the full system runbook (Compose + Kubernetes) and
-architecture docs, see the **`fiap-cloud-games-orchestration`** repository.
+(consumed by the Notifications Function since Phase 3). Runs standalone, via Docker Compose,
+and on local Kubernetes (see `k8s/`); in Phase 3 it is reached through the **Kong API
+Gateway** (`/api/auth/*` public, `/api/users/*` JWT-protected at the edge and here). For the
+full system runbook (Compose + Kubernetes) and architecture docs, see the
+**`fiap-cloud-games-orchestration`** repository.
 
-Part of the five-repository solution (`users-api`, `catalog-api`,
-`payments-api`, `notifications-api`, `orchestration`).
+Part of the six-repository solution (`users-api`, `catalog-api`, `payments-api`,
+`notifications-function`, `notifications-api` [Phase 2 history], `orchestration`).
 
 ---
 
