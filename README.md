@@ -47,9 +47,25 @@ Single-project layout with internal folders: `Domain`, `Application`,
 | GET | `/api/users/{id}` | Admin | Get a user |
 | DELETE | `/api/users/{id}` | Admin | Delete a user → 204 |
 | GET | `/health` | public | Liveness probe → 200 |
+| GET | `/metrics` | public (direct port only, not routed by Kong) | Prometheus metrics (Phase 3) |
 | GET | `/swagger` | public | Swagger UI |
 
 Seeded users: `admin@fcg.com / Admin@123` (Admin), `user@fcg.com / User@123` (User).
+
+### Metrics (Phase 3)
+
+`prometheus-net.AspNetCore` exposes the default HTTP metrics (`http_requests_received_total`,
+`http_request_duration_seconds`, `http_requests_in_progress`) plus custom counters with
+low-cardinality labels only (no ids, no e-mails):
+
+| Metric | Labels | Meaning |
+|---|---|---|
+| `fcg_users_registrations_total` | — | Users registered successfully |
+| `fcg_users_login_attempts_total` | `result` = `success` \| `failure` | Login attempts |
+| `fcg_events_published_total` | `topic`, `result` = `success` \| `failure` | `UserCreatedEvent` publications to Kafka |
+
+Scraped by Prometheus and shown in the Grafana "FCG Overview" dashboard (orchestration repo,
+`docs/observability.md`).
 
 ### Events published
 

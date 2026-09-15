@@ -5,6 +5,7 @@ using UsersApi.Contracts;
 using UsersApi.Domain;
 using UsersApi.Domain.Exceptions;
 using UsersApi.Messaging;
+using UsersApi.Observability;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -52,6 +53,7 @@ public class AuthService : IAuthService
         await _users.AddAsync(user, ct);
         await _uow.SaveChangesAsync(ct);
 
+        FcgMetrics.Registrations.Inc();
         _logger.LogInformation("User registered: {Email}", email);
 
         // Publish AFTER the commit. KafkaEventPublisher swallows/logs broker errors, so a
@@ -65,13 +67,20 @@ public class AuthService : IAuthService
     public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password))
+        {
+            FcgMetrics.LoginAttempts.WithLabels("failure").Inc();
             throw new UnauthorizedException("Invalid credentials.");
+        }
 
         var user = await _users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), ct);
         if (user is null || !_hasher.Verify(request.Password, user.PasswordHash))
+        {
+            FcgMetrics.LoginAttempts.WithLabels("failure").Inc();
             throw new UnauthorizedException("Invalid credentials.");
+        }
 
         var (token, expires) = _jwt.Generate(user);
+        FcgMetrics.LoginAttempts.WithLabels("success").Inc();
         _logger.LogInformation("User logged in: {Email}", user.Email);
         return new LoginResponse(token, expires, user.Email, user.Role.ToString());
     }

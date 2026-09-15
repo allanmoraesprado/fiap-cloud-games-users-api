@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Confluent.Kafka;
 using UsersApi.Application.Interfaces;
+using UsersApi.Observability;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -31,6 +32,7 @@ public class KafkaEventPublisher : IEventPublisher, IDisposable
             var json = JsonSerializer.Serialize(message);
             var result = await _producer.ProduceAsync(
                 topic, new Message<string, string> { Key = key, Value = json }, ct);
+            FcgMetrics.EventsPublished.WithLabels(topic, "success").Inc();
             _logger.LogInformation(
                 "Published event to {Topic} partition {Partition} offset {Offset}",
                 topic, result.Partition.Value, result.Offset.Value);
@@ -39,6 +41,7 @@ public class KafkaEventPublisher : IEventPublisher, IDisposable
         {
             // Swallow-and-log: the broker being momentarily unavailable must not fail
             // the caller's use case. At-least-once is not guaranteed (outbox is future work).
+            FcgMetrics.EventsPublished.WithLabels(topic, "failure").Inc();
             _logger.LogWarning(ex, "Failed to publish event to {Topic}; continuing.", topic);
         }
     }

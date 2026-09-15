@@ -2,6 +2,8 @@ using UsersApi.Application.Interfaces;
 using UsersApi.Configuration;
 using UsersApi.Infrastructure.Persistence;
 using UsersApi.Middleware;
+using UsersApi.Observability;
+using Prometheus;
 using Serilog;
 
 // Keeps Npgsql DateTime handling compatible with the current domain model.
@@ -37,6 +39,10 @@ using (var scope = app.Services.CreateScope())
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSerilogRequestLogging();
 
+// Prometheus (Phase 3): default HTTP request metrics + custom counters on /metrics.
+FcgMetrics.EnsureInitialized();
+app.UseHttpMetrics();
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -45,6 +51,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapMetrics();
 
 app.Run();
 
