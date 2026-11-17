@@ -1,0 +1,10 @@
+# Non-sensitive settings of UsersAPI on AKS. JWT key, connection string and the seeded admin
+# password come from Key Vault (mounted files); the regular demo user is not seeded in the cloud.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users-api-config
+  namespace: fcg
+data:
+  Kafka__UserCreatedTopic: "fcg.users.created"
+  Seed__UserPassword: ""

@@ -11,6 +11,9 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Secrets mounted as files (Key Vault CSI driver on AKS) override every other source.
+builder.Configuration.AddMountedSecrets(builder.Configuration[RuntimeConfiguration.SecretsPathKey]);
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
@@ -18,6 +21,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+Log.Information("Starting UsersApi version {Version}", RuntimeConfiguration.AppVersion);
 
 builder.Services.AddControllers();
 builder.Services.AddFcgServices(builder.Configuration);
@@ -32,10 +36,12 @@ using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<UsersDbContext>();
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    try { await DbSeeder.SeedAsync(ctx, hasher); }
+    var seed = builder.Configuration.GetSection("Seed").Get<SeedSettings>() ?? new SeedSettings();
+    try { await DbSeeder.SeedAsync(ctx, hasher, seed); }
     catch (Exception ex) { Log.Warning(ex, "Database seeding failed (database may be unavailable)."); }
 }
 
+app.UseAppVersionHeader();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSerilogRequestLogging();
 
